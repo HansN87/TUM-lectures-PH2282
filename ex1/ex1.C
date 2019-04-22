@@ -6,7 +6,7 @@
  *
  * Ex 1, conceptual steps:
  *   1) build a model 
- *   2) bulid a data set by sampling the model and storing the events in a hist
+ *   2) build a data set by sampling the model and storing the events in a hist
  *   3) plot model and pseudo-data set for different background and signals rates
  *
  ****************************************************************************/
@@ -15,7 +15,7 @@
 // This function builds a model as a TF1 and plot it
 // sgnCts -> expectation for the signal cts
 // bkgCts -> expectation for the bkg cts
-TF1 BuildModel (const double sgnCts, const double bkgCts) {
+TF1 BuildModel (const double bkgCts, const double sgnCts) {
 
    /*************************************************************************
     * Initialize the model as
