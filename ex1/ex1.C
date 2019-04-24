@@ -24,12 +24,12 @@ TF1 BuildModel (const double bkgCts, const double sgnCts) {
     *************************************************************************/
    // define parameters for the signal distribution, i.e. mean and sigma of the
    // guassian
-   const double mean       =   0;
+   const double mean       =  10;
    const double sigma      =   1;
 
    // define parameters for the background distribution, i.e. the window edges
-   const double rangeMin   = -10; 
-   const double rangeMax   =  10;
+   const double rangeMin   =   0; 
+   const double rangeMax   =  20;
    const double rangeWidth = rangeMax - rangeMin;
 
    // define binning
@@ -63,7 +63,7 @@ TF1 BuildModel (const double bkgCts, const double sgnCts) {
 // model -> model built using the BuildModel
 // cts   -> expectation for the number of signal + background events 
 //          (the ratio is specify by the model)
-TH1D BuildDataSet(TF1& model, const int cts) {
+TH1D BuildDataset(TF1& model, const int cts) {
 
    /*************************************************************************
     * Initialize and generate data sets.
@@ -74,16 +74,16 @@ TH1D BuildDataSet(TF1& model, const int cts) {
    const double xmin = model.GetXmin();
    const double xmax = model.GetXmax();
 
-   // Initalize data set histogram
-   TH1D dataSet ("","",100,xmin,xmax);
+   // Initialize data set histogram
+   TH1D dataset ("","",100,xmin,xmax);
 
    // Fill histogram
    // Randomly define the number of cts of the data set
    const int rndCts = gRandom->Poisson(cts);
 
-   for (int i = 0; i < rndCts; i++) dataSet.Fill(model.GetRandom(xmin,xmax));
+   for (int i = 0; i < rndCts; i++) dataset.Fill(model.GetRandom(xmin,xmax));
 
-   return dataSet;
+   return dataset;
 }
 
 // create objects and plot them
@@ -97,7 +97,7 @@ void ex1 () {
    auto myModel = BuildModel(1,1);
    myModel.DrawCopy();
    cc.cd(2);
-   auto myDataSet = BuildDataSet(myModel, 100);
-   myDataSet.DrawCopy();
+   auto myDataset = BuildDataset(myModel, 2000);
+   myDataset.DrawCopy();
    cc.DrawClone();
 }
