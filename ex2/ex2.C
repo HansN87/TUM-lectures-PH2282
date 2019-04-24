@@ -7,7 +7,9 @@
  * Ex 2, conceptual steps:
  *   1) build a model 
  *   2) build a data set by sampling the model and storing the events in a hist
- *   3) plot model and pseudo-data set for different background and signals rates
+ *   3) compute the maximum likelihood estimator for the signal and background
+ *      expectations
+ *   4) repeat steps 3 and 4 and store the estimator values in histograms
  *
  ****************************************************************************/
 
@@ -24,12 +26,12 @@ TF1 BuildModel (const double bkgCts, const double sgnCts) {
     *************************************************************************/
    // define parameters for the signal distribution, i.e. mean and sigma of the
    // guassian
-   const double mean       =   0;
+   const double mean       =  10;
    const double sigma      =   1;
 
    // define parameters for the background distribution, i.e. the window edges
-   const double rangeMin   = -10; 
-   const double rangeMax   =  10;
+   const double rangeMin   =   0; 
+   const double rangeMax   =  20;
    const double rangeWidth = rangeMax - rangeMin;
 
    // define binning
@@ -111,7 +113,7 @@ double nll  (const double *par) {
 }
 
 // create data set and find MLE for background and signal expectations
-void ex2_single_dataset (int numberCts = 1000) {
+void ex2_single_dataset (int numberCts = 2000) {
 
    // create minimizer and set its properties
    ROOT::Minuit2::Minuit2Minimizer minimizer (ROOT::Minuit2::kMigrad);
@@ -144,7 +146,7 @@ void ex2_single_dataset (int numberCts = 1000) {
 }
 
 // create multiple datasets and find MLE for background and signal expectations
-void ex2 (int numberCts = 1000) {
+void ex2 (int numberCts = 2000) {
 
    // create minimizer and set its properties
    ROOT::Minuit2::Minuit2Minimizer minimizer (ROOT::Minuit2::kMigrad);
@@ -187,5 +189,4 @@ void ex2 (int numberCts = 1000) {
    cc.DrawClone();
  
    return;
-
 }
