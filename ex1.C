@@ -11,7 +11,6 @@
  *
  ****************************************************************************/
 
-
 // This function builds a model as a TF1 and plot it
 // sgnCts -> expectation for the signal cts
 // bkgCts -> expectation for the bkg cts
@@ -32,23 +31,18 @@ TF1 BuildModel (const double bkgCts, const double sgnCts) {
    const double rangeMax   =  20;
    const double rangeWidth = rangeMax - rangeMin;
 
-   // define binning
-   const int    binNum     = 100;
-   const double binWidth   = rangeWidth / binNum;
-
    // Coding-style note: all variables up to here are const, including the 
    // arguments parsed to the function -> this makes clear that these values 
    // cannot be changed and avoid unintentional modification of these variables
 
    // Build model 
-   TF1 model ("modelGen", "([0]*(1/[2]) + [1]*(TMath::Gaus(x,[3],[4],1)))*[5]", rangeMin, rangeMax);
+   TF1 model ("modelGen", "(1./([0]+[1]))*([0]*(1/[2]) + [1]*(TMath::Gaus(x,[3],[4],1)))", rangeMin, rangeMax);
    model.SetParNames ("bkgCts","sgnCts", "rangeWidth", "mean","sigma", "binWidth");
    model.FixParameter(0, bkgCts);
    model.FixParameter(1, sgnCts);
    model.FixParameter(2, rangeWidth);
    model.FixParameter(3, mean);
    model.FixParameter(4, sigma);
-   model.FixParameter(5, binWidth);
 
    // Set Properties of the TF1s: 
    // increase the number of points used for interpolation 
@@ -87,17 +81,17 @@ TH1D BuildDataset(TF1& model, const int cts) {
 }
 
 // create objects and plot them
-void ex1 () {
+void ex1 (const double lambda_s = 1000, const double lambda_b = 1000 ) {
    // these commands can also be run directly using the interpreter after
    // loading the macro as a library
    //  .L ex1.C
    TCanvas cc;
    cc.Divide(2,1);
    cc.cd(1);
-   auto myModel = BuildModel(1,1);
+   auto myModel = BuildModel(lambda_b,lambda_s);
    myModel.DrawCopy();
    cc.cd(2);
-   auto myDataset = BuildDataset(myModel, 2000);
+   auto myDataset = BuildDataset(myModel, lambda_b+lambda_s);
    myDataset.DrawCopy();
    cc.DrawClone();
 }
