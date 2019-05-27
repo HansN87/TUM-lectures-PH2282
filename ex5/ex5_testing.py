@@ -8,11 +8,10 @@ Ex 1, conceptual steps
     1) build a model 
     2) build a data set by sampling the model and storing the events in a hist
     3) plot model and pseudo-data set for a given background and signals rate
-    4) compute the maximum likelihood estimator (MLE) for the background and 
-       signal expectation
-    5) repeat 1000 times the points from 2 to 5. Store the MLE values and compute the 
-       median, confirming that it converges to the injected value when the number of 
-       sample increases
+    4) compute the maximum likelihood estimator (MLE) for the signal fraction p_s = lambda_s / N 
+    5) calculate the TS distributions for the hypothesis tests given on slide 37
+    6) for each tests one should observe convergenve to chi-sq distributions as function of the sample size
+       (dof=1 for first test, dof=2 for second test)
 '''
 
 import math 
@@ -35,6 +34,7 @@ x_max = 20.0
 
 def pdf(x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax, truncated_gaus_norm = 0):  
     if not truncated_gaus_norm:
+        # normalize the truncated gaussian
         truncated_gaus_norm = norm.cdf(xmax, gaussian_mean, gaussian_sigma) - norm.cdf(xmin, gaussian_mean, gaussian_sigma)
     return p_s * norm.pdf(x, gaussian_mean, gaussian_sigma) / truncated_gaus_norm + (1. - p_s) * 1./(xmax - xmin)
 
@@ -108,7 +108,7 @@ for nsamples in sample_sizes:
     tss_dof1 = []
     tss_dof2 = []
     print "currently doing N=", nsamples
-    for k in range(10000): 
+    for k in range(100000): 
         pseudo_data = BuildDataset(nsamples, p_s = true_p_s, gaussian_mean = true_gaussian_mean)
         
         # minimize in p_s and gaussian_mean
@@ -119,14 +119,22 @@ for nsamples in sample_sizes:
         # minimize gaussian_mean assuming p_s = ps_true = 0.2
         fmin = lambda g_mean: nll(pseudo_data, true_p_s, g_mean, gaussian_sigma, x_min, x_max)
         result = optimize.minimize(fmin, [true_gaussian_mean], bounds=[(x_min, x_max)])
+
         logl0 = result.fun
     
+        # calculate the TS for hypothesis test 1: H0:p_s = 0.2 vs H1:p_s \neq 0.2
+        # this will have distribution of chisq(dof=1) if N is large
+        # see slide 35 of lecture 5
         ts = 2 * (logl0 - logl1)
         tss_dof1.append(ts)
     
     
         # eval neglogl for gaussian_mean = gaussian_mean_true. p_s = p_s_true
         logl0 = nll(pseudo_data, true_p_s, true_gaussian_mean, gaussian_sigma, x_min, x_max)
+
+        # calculate the TS for hypothesis test 2: H0: p_s = 0.2, mean = 10.0 vs H1: p_s and mean are different from H0
+        # this will have distribution of chisq(dof=2) if N is large
+        # see slide 38 of lecture
         ts = 2 * (logl0 - logl1)
         tss_dof2.append(ts)
 
@@ -141,6 +149,7 @@ xmax_p = 20.0
 xmin_p = 0.0
 nbins = 50
 
+# do all plots
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
 xvals = np.linspace(xmin_p, xmax_p, 1000)
 yvals = chi2.pdf(xvals, 1)

@@ -8,12 +8,12 @@ Ex 1, conceptual steps
     1) build a model 
     2) build a data set by sampling the model and storing the events in a hist
     3) plot model and pseudo-data set for a given background and signals rate
-    4) compute the maximum likelihood estimator (MLE) for the background and 
-       signal expectation
-    5) repeat 1000 times the points from 2 to 5. Store the MLE values and compute the 
-       median, confirming that it converges to the injected value when the number of 
-       sample increases
+    4) compute the maximum likelihood estimator (MLE) for the signal fraction p_s = lambda_s / N
+    5) repeat 1000 times the points from 2 to 5. Store the MLE values and study the distribution of it
+    6) observe convergence to normal distribution (MLE is asymptotically normal!)
+    7) observe that MLE attains the CRB bound for large samples (MLE is asymptotically efficient)
 '''
+
 
 import math 
 import numpy as np
@@ -26,19 +26,25 @@ from scipy.integrate import simps
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 
+# true parameters
 gaussian_mean = 10.0
 gaussian_sigma = 1.0
 x_min = 0.0
 x_max = 20.0
 
-# fix normalization of cramer rao
+# normalization of gaussian peak (truncated beyond xmin, xmax)
 f = lambda x: norm.pdf(x, gaussian_mean, gaussian_sigma) 
 truncated_gaus_norm = quad(f, x_min, x_max, points=[x_min, gaussian_mean, x_max])[0]
 
+# our toy model using a different parameterization
+# instead of lambda_s we use p_s = lambda_s / N where we assume
+# the sample size N to be fixed
 def pdf(x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax):  
     return p_s * norm.pdf(x, gaussian_mean, gaussian_sigma) / truncated_gaus_norm + (1. - p_s) * 1./(xmax - xmin)
 
 
+# the denominator of the CRB (eq. 16 of slides) requires evaluating the average value of the partial derivative of the logL function
+# this can be done "semi-analytically* through numeric integration
 def partial_log_pdf(x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax):
     fpdf = norm.pdf(x, gaussian_mean, gaussian_sigma) / truncated_gaus_norm
     bpdf = 1/(xmax-xmin)
@@ -49,7 +55,7 @@ def BuildDataset(N, p_s, xmin=x_min, xmax=x_max, gaussian_mean=gaussian_mean, ga
     # data are generated in two steps. First each event is randomly attributed
     # to the signal or background. Then the energy distribution is sampled form
     # the proper pdf
-    #
+
     # First step generate random numbers between 0 and 1 and attribute each
     # event to signal or background using the weight between the expectation for
     # signal counts and the total
@@ -66,6 +72,7 @@ def BuildDataset(N, p_s, xmin=x_min, xmax=x_max, gaussian_mean=gaussian_mean, ga
     sig_samples=numpy.random.normal(gaussian_mean, gaussian_sigma, len(idx_s))
 
     # remove events outside xmin, xmax
+    # and resample until truncation is satisfied
     within_bounds = False
     while not within_bounds: 
         idx_too_small = np.where(sig_samples<xmin)[0]
@@ -82,6 +89,7 @@ def BuildDataset(N, p_s, xmin=x_min, xmax=x_max, gaussian_mean=gaussian_mean, ga
 
 
 def nll (x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax):
+    # the likelihood function is the pdf of the observables treated as function of the parameter 
     pdf_vals = pdf(x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax)
    
     # fix underflow (otherwise numeric problems for p_s -> 1) when assuming true_p_s = 0.1
@@ -94,15 +102,13 @@ def nll (x, p_s, gaussian_mean, gaussian_sigma, xmin, xmax):
  
     return -np.sum( logl )
     
-true_p_s = 0.2 # (the probability to generate a signal event is 10%)
-#nsamples = 100
-
-
+true_p_s = 0.2 # (the true probability to generate a signal event is 20%)
 ndatasets = 100000
 
 mle_vars = []
 crb_vars = []
 
+# define the grid of sample sizes (sample size of each simulated dataset)
 nsvals0 = (np.asarray(range(8))+2).tolist()
 nsvals1 = ((np.asarray(range(20))+1)*5).tolist()[1:]
 
@@ -110,6 +116,9 @@ for ns in nsvals0+nsvals1:
     nsamples = ns 
 
     def get_results(true_p_s, nsamples):                   
+        # this function generates the toy dataset
+        # and performs the MLE calculation
+        # returns the MLE for p_s
         vals = []
         for i in range(ndatasets):
             pseudo_data = BuildDataset(nsamples, p_s = true_p_s)
@@ -126,16 +135,24 @@ for ns in nsvals0+nsvals1:
     print "mean is", mean_central, "pm", np.sqrt(np.var(vals)/nsamples), np.sum(vals) / len(vals)
     print "std is", std
     
-    # define the integrad for the calculation of the average value
+    # define the integrad for the calculation of the average value of the partial derivative of the log-likelihood function (in p_s)
+    # this is needed to calculat ethe CRB bound
     fint = lambda x: pdf(x, true_p_s, gaussian_mean, gaussian_sigma, x_min, x_max) * partial_log_pdf(x, true_p_s, gaussian_mean, gaussian_sigma, x_min, x_max)**2
     
     result = quad(fint, x_min, x_max, points=[x_min, gaussian_mean, x_max])
-    print result
+    #print result
     
     avg_denom = result[0]
     
-    # now we need to take care of the nominator
-    # need numerical estimate of the derivative
+    # now we need to take care of the numerator
+    # the numerator (eq. 16) is the derivative (in p_s) of the average value of the MLE
+    # unfortunately we don't have an analytic expression for the MLE
+    # thus we need a numerical estimate of the derivative
+
+    # idea: we calcuale the mean at three points around the true value of p_s
+    # we approximate the derivative of the mean as the slope of a linear function
+    # that is given by the three points
+
     rel_precision = 0.1
     abs_precision = rel_precision * true_p_s
     
@@ -146,6 +163,8 @@ for ns in nsvals0+nsvals1:
     xvals = np.array([true_p_s-abs_precision, true_p_s, true_p_s+abs_precision])
     yvals = np.array([mean_low, mean_central, mean_high])
     ym = np.mean(yvals)
+
+    # linear regression in three points
     slope = np.sum( (xvals - xm) * (yvals - ym) ) / np.sum( (xvals - xm) ** 2)
     
     var_cramer_bound = slope**2 / (nsamples * avg_denom)
