@@ -57,12 +57,13 @@ model {
 
 generated quantities {
 
-  vector[N_groups] lines[N_model];
+  vector[N_model] lines[N_groups];
 
   for (n in 1:N_groups) {
 
 
-    lines[n][:] = beta0[n] + beta1 * x_model;
+
+    lines[n] = beta0[n] + beta1 * x_model;
     
 
   }
