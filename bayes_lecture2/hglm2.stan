@@ -1,29 +1,26 @@
 data {
+  int N; // number of observations
+  int N_groups; // number of groups
+  int groups[N]; // group index
 
-  int N;
-  int N_groups;
-  int groups[N];
+  vector[N] x1; // x data
+  vector[N] y; // y data
 
-  vector[N] x1;
-  vector[N] y;
+  real<lower=0> sigma; // error
 
-  real<lower=0> sigma;
+  int N_model; // for plotting
 
-  int N_model;
-
-  vector[N_model] x_model;
-  
-  
-
-  
+  vector[N_model] x_model; // for plotting
 
 }
 
 parameters {
 
-  vector[N_groups] beta0;
-  vector[N_groups] beta1;
 
+  vector[N_groups] beta0; // group level intercept
+  vector[N_groups] beta1; // group level slope
+
+  // hyper parameters
   real mu_beta0;
   real<lower=0> sigma_beta0;
 
@@ -35,7 +32,7 @@ parameters {
 
 
 transformed parameters {
-  vector[N] mu;
+  vector[N] mu; // likelihood mean
 
 
   mu = beta0[groups] + beta1[groups] .* x1;
@@ -46,18 +43,18 @@ transformed parameters {
 model {
 
 
-
+  // hyoer priors
   mu_beta0 ~ normal(0, 10);
   sigma_beta0 ~ cauchy(0, 2.5);
 
-  beta0 ~ normal(mu_beta0, sigma_beta0);
-
-
+  
   mu_beta1 ~ normal(0, 10);
   sigma_beta1 ~ cauchy(0, 2.5);
 
-  beta1 ~ normal(mu_beta1, sigma_beta1);
+  
+  beta0 ~ normal(mu_beta0, sigma_beta0);
 
+  beta1 ~ normal(mu_beta1, sigma_beta1);
  
   y ~ normal(mu,sigma);
 
